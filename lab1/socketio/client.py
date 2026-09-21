@@ -10,13 +10,16 @@ def connect():
 def disconnect():
     print("Disconnected")
 
-@socket.event
-def msg(data):
-    print(data)
-
 socket.connect("http://localhost:8080")
 
-message = input("Send: ")
-socket.emit("msg", message)
+while True:
+    message = input("Send: ")
+    socket.emit("msg", message.encode())
+
+    @socket.event
+    def msg(socket_id, data):
+        print(data.decode())
 
 socket.wait()
+
+

@@ -1,6 +1,7 @@
 import socketio
 
 socket = socketio.Client()
+connected = True
 
 @socket.event
 def connect():
@@ -10,16 +11,21 @@ def connect():
 def disconnect():
     print("Disconnected")
 
+@socket.event
+def msg(data):
+    print(data.decode())
+
 socket.connect("http://localhost:8080")
 
-while True:
+while connected:
     message = input("Send: ")
-    socket.emit("msg", message.encode())
 
-    @socket.event
-    def msg(socket_id, data):
-        print(data.decode())
+    if message == "EXIT":
+        socket.emit("msg", message.encode())
+        socket.wait()
+        connected = False
+    else:
+        socket.emit("msg", message.encode())
 
-socket.wait()
 
 

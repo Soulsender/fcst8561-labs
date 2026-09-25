@@ -11,7 +11,7 @@ def validate_port(port: int):
 def resolve_host(target):
     try:
         target = socket.gethostbyname(target)
-        print("Scanning:", target)
+        print(f"Scanning: {target}")
 
     except socket.gaierror:
         print("Invalid hostname or IP address")
@@ -56,7 +56,9 @@ for port in range(start_port, end_port + 1):
             )
         except OSError:
             service = "unknown"
-        print("Port", port, "is OPEN using", service)
+        print(f"Port {port} is OPEN using {service}")
+    # else:
+    #     print(f"Port {port} is CLOSED")
 
 # list open ports
 if open_ports:

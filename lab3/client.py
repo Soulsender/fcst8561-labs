@@ -1,5 +1,5 @@
 import socket
-# from getpass import getpass
+from getpass import getpass
 
 HOST = "127.0.0.1"
 PORT = 12346
@@ -10,7 +10,7 @@ try:
     client_socket.connect((HOST, PORT))
 
     username = input("Username: ")
-    password = input("Password: ")
+    password = getpass("Password: ")
 
     client_socket.sendall(
         f"AUTH|{username}|{password}".encode()

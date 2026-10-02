@@ -16,8 +16,7 @@ def verify_otp(secret, otp):
     totp = pyotp.TOTP(secret)
     return totp.verify(otp)
 
-alice_secret = "PQE6UTKFIXGLCYQPK52THBDS2LLHKOGM"#pyotp.random_base32()
-print(alice_secret)
+alice_secret = pyotp.random_base32()
 
 users = {
     "alice": {
@@ -27,13 +26,10 @@ users = {
         "totp_secret": alice_secret
     }
 }
-totp = pyotp.TOTP(
+totp = pyotp.TOTP(alice_secret)
+
+
+print(
+    "Alice's TOTP secret:",
     users["alice"]["totp_secret"]
 )
-
-uri = totp.provisioning_uri(
-    name="alice",
-    issuer_name="FSCT8561-Lab3"
-)
-
-print(uri)

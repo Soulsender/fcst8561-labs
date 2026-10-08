@@ -6,6 +6,10 @@ __pycache__/
 *.py[codz]
 *$py.class
 
+#pcaps
+*.pcap
+*.pcapng
+
 # C extensions
 *.so
 

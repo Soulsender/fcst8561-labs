@@ -1,10 +1,4 @@
-from scapy.all import rdpcap, IP
-
-tcp_packets = []
-http_packets = []
-dns_packets = []
-packets = rdpcap("botnet-capture-20110812-rbot.pcap")
-print("File found")
+from scapy.all import IP
 
 pkt = packets[0]
 print("Contains IPv4?", IP in pkt)
@@ -25,9 +19,10 @@ if len(tcp_packets) > 0:
     pkt = tcp_packets[0]
     print("TCP flags:", pkt[TCP].flags)
 
-pkt = packets[0]
-print("Size (bytes):", len(pkt))
-print("Timestamp:", float(pkt.time))
+if len(tcp_packets) > 0:
+    pkt = tcp_packets[0]
+    print("TCP flags:", pkt[TCP].flags)
+
 
 shown = 0
 for pkt in packets:

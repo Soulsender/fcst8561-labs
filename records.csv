@@ -1,2 +1,0 @@
-endpoint,status,length,content-type
-http://localhost:3000/rest/products/search?q=%27,200,30,application/json; charset=utf-8

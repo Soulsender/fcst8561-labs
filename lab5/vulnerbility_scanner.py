@@ -1,7 +1,3 @@
-import requests, csv
-
-BASE_URL = "http://localhost:3000"
-
 # **Required behavior**
 # 1. Test `/rest/products/search` with a harmless text marker and one non-executable HTML input; check for unchanged reflection in the HTTP response.
 # 2. Compare a normal search term with at least two **simple SQL syntax probes** (for example `'` and `')`). Check for HTTP 500 responses or recognizable database error text.
@@ -12,49 +8,87 @@ BASE_URL = "http://localhost:3000"
 # 7. Save findings to `vulnerability_findings.csv`.
 # 8. Handle failed requests gracefully. If no indicators are found, explain that this **does not prove the site is secure**.
 
+import requests, csv
 
+BASE_URL = "http://localhost:3000"
 
-def search_probe(url, query):
-    probe_response = requests.get(BASE_URL + url, params={"q": query}, timeout=5)
-    check_headers(probe_response)
-    if q in probe_response.text:
-        print("Marker appears in the response — investigate its context")
-    else:
-        print("Marker was not found in this response")
+def xss_check(url, test):
+    print("Testing for XSS...")
+    try:   
+        probe_response = requests.get(BASE_URL + url, params={"q": test}, timeout=5)
+        if test in probe_response.text:
+            print("Possible XSS found")
+            record(probe_response, catagory="high", observation="<p> injected into page", review="Yes")
+        else:
+            print("No XSS found. This does not prove the site is insecure.")
+            record(probe_response, catagory="none", observation="<p> injected into page", review="No")
+    except requests.RequestException as e:
+        print("Request failed:", e)
     
-def response_probe(url, probe):
-    probe_response = requests.get(BASE_URL + url, params={"q": probe}, timeout=5)
-    check_headers(probe_response)
-    print("Probe input status:", probe_response.status_code)
+def sqli_test(url, test):
+    print("Testing for SQL Injection...")
+    try:
+        probe_response = requests.get(BASE_URL + url, params={"q": test}, timeout=5)
+        if probe_response == 500:
+            print("Possible SQLi found")
+            record(probe_response, catagory="high", observation="Used ' to test", review="Yes")
+        else:
+            print("No SQLi found. This does not prove the site is insecure.")
+            record(probe_response, catagory="none", observation="Used ' to test", review="No")
+    except requests.RequestException as e:
+        print("Request failed:", e)
 
-def check_headers(request):
-    record = {
-            "endpoint": request.url,
-            "status": request.status_code,
-            "length": len(request.content),
-            "content-type": request.headers.get("Content-Type", "")
-        }
-    with open("records.csv", "w", newline="", encoding="utf-8") as file:
-        writer = csv.DictWriter(file, fieldnames=["endpoint", "status", "length", "content-type"])
-        writer.writeheader()
-        writer.writerows([record])
-    print("Status code:", record["status"])
-    print("Response length:", record["length"])
-    print("Content type:", record["content-type"])
 
-    if "Server" in request.headers:
-        # header found
-        print("Server header found")
+def header_test(headers):
+    print("Testing Headers...")
+    try:
+        probe_response = requests.get(BASE_URL, timeout=5)
+        for h in headers:
+            if h == "Server":
+                print("Server header found")
+                record(probe_response, catagory="info", observation="Server header found", review="Yes")
+            elif h in probe_response.headers:
+                print(h, "found")
+                record(probe_response, catagory="medium", observation=f"{h} header found", review="Yes")
+            else:
+                print(h, "not found. This does not prove the site is insecure.")
+                record(probe_response, catagory="none", observation=f"{h} header not found", review="No")
+        print("To scan for additional headers, configure them in the function parameters")
+    except requests.RequestException as e:
+        print("Request failed:", e)
+
+
+def record(request, catagory, observation, review):
+    endpoint = request.url
+    record_data = {
+        "endpoint": endpoint,
+        "catagory": catagory,
+        "observation": observation,
+        "review": review,
+    }
+
+    with open("vulnerability_findings.csv", "a", newline="", encoding="utf-8") as file:
+        writer = csv.DictWriter(
+            file,
+            fieldnames=["endpoint", "catagory", "observation", "review"]
+        )
+
+        if file.tell() == 0:
+            writer.writeheader()
+
+        writer.writerow(record_data)
+
+    print(f"Endpoint: {endpoint}\nCatagory: {catagory}\nObservation: {observation}\nReview: {review}")
     return request
 
 
-# queries
-search_urls = ["/rest/products/search", "/"]
-queries = ["apples", "bananas"]
-for q in queries:
-    for u in search_urls:
-        search_probe(u, q)
+# 1. test for XSS reflection
+xss_check("/rest/products/search", "<p>Test for XSS</p>")
 
-response_probe("/rest/products/search", "'")
+# 2. test for SQLi
+sqli_test("/rest/products/search", "'")
+sqli_test("/rest/products/search", "')")
 
-print("Saved practice_records.csv")
+# 3. header test
+header_test(["Content-Security-Policy", "X-Content-Type-Options"])
+

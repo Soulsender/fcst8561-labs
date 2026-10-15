@@ -24,7 +24,7 @@ def check_headers(request):
             "length": len(request.content),
             "content-type": request.headers.get("Content-Type", "")
         }
-    with open("records.csv", "w", newline="", encoding="utf-8") as file:
+    with open("http_scan_results.csv", "w", newline="", encoding="utf-8") as file:
         writer = csv.DictWriter(file, fieldnames=["endpoint", "status", "length", "content-type"])
         writer.writeheader()
         writer.writerows([record])
@@ -47,4 +47,4 @@ for q in queries:
 
 response_probe("/rest/products/search", "'")
 
-print("Saved practice_records.csv")
+print("Saved http_scan_results.csv")

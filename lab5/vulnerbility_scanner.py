@@ -31,10 +31,10 @@ def sqli_test(url, test):
         probe_response = requests.get(BASE_URL + url, params={"q": test}, timeout=5)
         if probe_response == 500:
             print("Possible SQLi found")
-            record(probe_response, catagory="high", observation="Used ' to test", review="Yes")
+            record(probe_response, catagory="high", observation=f"Used {test} to test", review="Yes")
         else:
             print("No SQLi found. This does not prove the site is insecure.")
-            record(probe_response, catagory="none", observation="Used ' to test", review="No")
+            record(probe_response, catagory="none", observation=f"Used {test} to test", review="No")
     except requests.RequestException as e:
         print("Request failed:", e)
 
@@ -44,7 +44,7 @@ def header_test(headers):
     try:
         probe_response = requests.get(BASE_URL, timeout=5)
         for h in headers:
-            if h == "Server":
+            if "Server" in probe_response.headers:
                 print("Server header found")
                 record(probe_response, catagory="info", observation="Server header found", review="Yes")
             elif h in probe_response.headers:

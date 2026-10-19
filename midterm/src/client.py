@@ -13,7 +13,7 @@ def http_scan():
     try:
         probe_response = requests.get(BASE_URL, timeout=5)
 
-        print(f"Server reported: {requests.status_code}")
+        print(f"Server reported: {probe_response.status_code}")
 
         print("Testing Headers...")
         for h in headers:
@@ -23,7 +23,7 @@ def http_scan():
                 print(h, "not found")
     
     except requests.RequestException as e:
-        print("Request failed:", e)
+        print("Connection failed")
 
    
 
@@ -121,14 +121,15 @@ try:
 
             response = client_socket.recv(1024).decode().strip()
             print(response)
-            if response == "EXIT":
+            if response.casefold() == "exit":
                 break
             if choice == "0" and response == "PORTSCAN":
                 port_scan()
             elif choice == "1" and response == "HTTPSCAN":
                 http_scan()
             elif choice == "2" and response == "PCAPSCAN":
-                print()
+                response = client_socket.recv(1024).decode().strip()
+                print(response)
             
     
 finally:

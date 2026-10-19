@@ -7,11 +7,15 @@ PORT = 4444
 client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
 def http_scan():
-    BASE_URL = input("Enter URL of target: ")  
-    headers = ["Content-Security-Policy", "X-Content-Type-Options", "X-Powered-By", "Server", ]
+    base_url = input("Enter URL of target: ").strip()
+    if not base_url:
+        print("A target URL is required.")
+        return
+
+    headers = ["Content-Security-Policy", "X-Content-Type-Options", "X-Powered-By", "Server"]
 
     try:
-        probe_response = requests.get(BASE_URL, timeout=5)
+        probe_response = requests.get(base_url, timeout=5)
 
         print(f"Server reported: {probe_response.status_code}")
 
@@ -22,45 +26,57 @@ def http_scan():
             else:
                 print(h, "not found")
     
-    except requests.RequestException as e:
-        print("Connection failed")
+    except requests.RequestException as error:
+        print(f"HTTP scan failed: {error}")
 
    
 
 def port_scan():
-    target = input("Enter target: ")
-    start_port = int(input("Enter start port: "))
-    end_port = int(input("Enter end port: "))
+    target = input("Enter target: ").strip()
+    if not target:
+        print("A target is required.")
+        return
+
+    try:
+        start_port = int(input("Enter start port: ").strip())
+        end_port = int(input("Enter end port: ").strip())
+    except ValueError:
+        print("Ports must be integers.")
+        return
+
     open_ports = []
 
     def validate_port(port: int):
         return 1 <= port <= 65535
 
-    scanner = nmap.PortScanner()
+    if not (validate_port(start_port) and validate_port(end_port) and start_port <= end_port):
+        print("Invalid port range. Use ports from 1 to 65535 with start <= end.")
+        return
 
-    scanner.scan(
-        target,
-        f"{start_port}-{end_port}"
-    )
-
-    if not validate_port(start_port) and not validate_port(end_port):
-        print("Invalid port")
-        exit(1)
+    try:
+        scanner = nmap.PortScanner()
+        scanner.scan(target, f"{start_port}-{end_port}")
+    except (nmap.PortScannerError, OSError) as error:
+        print(f"Port scan failed: {error}")
+        return
 
     print(f"Scan results for {target}")
 
-    for protocol in scanner[target].all_protocols():
-        ports = scanner[target][protocol].keys()
+    hosts = scanner.all_hosts()
+    if not hosts:
+        print("No scan results were returned for that target.")
+        return
 
-        for port in sorted(ports):
-            port_info = scanner[target][protocol][port]
-            service = port_info.get("name")
-            
-            if port_info.get("state") == "open":
-                print(f"Port {port} is OPEN using {service}")
-                open_ports.append(port)
-            # elif port_info.get("state") == "closed":
-            #     print(f"Port {port} is CLOSED")
+    for host in hosts:
+        for protocol in scanner[host].all_protocols():
+            ports = scanner[host][protocol].keys()
+
+            for port in sorted(ports):
+                port_info = scanner[host][protocol][port]
+                service = port_info.get("name")
+                if port_info.get("state") == "open":
+                    print(f"Port {port} is OPEN using {service}")
+                    open_ports.append(port)
 
     if open_ports:
         print("Open port(s) found:", len(open_ports))
@@ -101,7 +117,6 @@ try:
     client_socket.connect((HOST, PORT))
 
     if authenticate():
-        print("Authenticated!")
         while True:
             menu = client_socket.recv(1024).decode().strip()
             if not menu:
@@ -109,7 +124,8 @@ try:
             print(menu)
 
             choice = input("> ").strip()
-            client_socket.sendall(choice.encode())
+            is_exit = choice.casefold() == "exit"
+            client_socket.sendall(b"exit" if is_exit else choice.encode())
 
             # if choice == "0":
             #     for _ in range(3):
@@ -120,8 +136,10 @@ try:
             #         client_socket.sendall(value.encode())
 
             response = client_socket.recv(1024).decode().strip()
+            if not response:
+                break
             print(response)
-            if response.casefold() == "exit":
+            if is_exit or response.casefold() == "exit":
                 break
             if choice == "0" and response == "PORTSCAN":
                 port_scan()
@@ -132,5 +150,12 @@ try:
                 print(response)
             
     
+except (OSError, EOFError) as error:
+    print(f"Client connection/input error: {error}")
+except KeyboardInterrupt:
+    print("Client stopped.")
 finally:
-    client_socket.close()
+    try:
+        client_socket.close()
+    except OSError:
+        pass

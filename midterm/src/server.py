@@ -1,10 +1,11 @@
-import socket, hashlib, pyotp
+import socket, hashlib, pyotp, logging
 from scapy.all import IP, TCP, UDP, ICMP, rdpcap
 from collections import defaultdict
 
 HOST = "127.0.0.1"
 PORT = 4444
 
+# sample user database
 users = {
     "jasper": {
         "password_hash": hashlib.sha256(
@@ -13,6 +14,17 @@ users = {
         "totp_secret": "PQE6UTKFIXGL"
     }
 }
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="[%(levelname)s] @ %(asctime)s: %(message)s",
+    handlers=[
+        logging.FileHandler("server.log", encoding="utf-8"),
+        logging.StreamHandler()
+    ]
+)
+
+logger = logging.getLogger(__name__)
 
 def packet_analyzer(client_socket):
     pcap_path = "FSCT8561_Operation_Sentinel_Traffic.pcap"
@@ -77,10 +89,15 @@ def packet_analyzer(client_socket):
 
 def authenticate(client_socket):
     message = client_socket.recv(1024).decode().strip()
+    if not message:
+        logger.info("Client disconnected during authentication")
+        return False
+
     parts = message.split("|")
 
     if len(parts) != 3 or parts[0] != "AUTH":
         client_socket.sendall(b"ERROR|Invalid authentication request")
+        logger.error("Unknown authentication mechanism")
         return False
 
     username = parts[1]
@@ -89,19 +106,26 @@ def authenticate(client_socket):
 
     if username not in users:
         client_socket.sendall(b"ACCESS_DENIED")
+        logger.warning("Access denied to user")
         return False
 
     if password_hash != users[username]["password_hash"]:
         client_socket.sendall(b"ACCESS_DENIED")
+        logger.warning("Access denied to user")
         return False
 
     client_socket.sendall(b"OTP_REQUIRED")
 
     message = client_socket.recv(1024).decode().strip()
+    if not message:
+        logger.info("Client disconnected during OTP verification")
+        return False
+
     parts = message.split("|")
 
     if len(parts) != 2 or parts[0] != "OTP":
         client_socket.sendall(b"ERROR|Invalid OTP request")
+        logger.error("Invalid OTP request")
         return False
 
     otp = parts[1]
@@ -109,9 +133,11 @@ def authenticate(client_socket):
 
     if totp.verify(otp):
         client_socket.sendall(b"ACCESS_GRANTED")
+        logger.info("Access granted to user")
         return True
     else:
         client_socket.sendall(b"ACCESS_DENIED")
+        logger.warning("Access denied to user")
         return False
 
 def menu(client_socket):
@@ -128,55 +154,75 @@ def menu(client_socket):
         return None
     message = message.casefold()
     if message == "0":
-        print("Port scan selected")
+        logger.info("Port scan selected")
         client_socket.sendall(b"PORTSCAN")
         return True
     elif message == "1":
-        print("HTTP scan selected")
+        logger.info("HTTP scan selected")
         client_socket.sendall(b"HTTPSCAN")
         return True
     elif message == "2":
-        print("PCAP scan selected")
+        logger.info("PCAP scan selected")
         client_socket.sendall(b"PCAPSCAN")
         packet_analyzer(client_socket)
         return True
     elif message == "exit":
-        print("Stopping server service...")
+        logger.info("Stopping server service...")
         client_socket.sendall(b"EXIT")
         return False
     else:
+        logger.error("Invalid error selected")
         client_socket.sendall(b"ERROR|Invalid option")
         return True
     
 
 server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-server_socket.bind((HOST, PORT))
-server_socket.listen(5)
+try:
+    server_socket.bind((HOST, PORT))
+    server_socket.listen(5)
+except OSError as error:
+    logger.critical("Could not start server on %s:%s: %s", HOST, PORT, error)
+    server_socket.close()
+    raise SystemExit(1)
 
 print(f"Server listening on {HOST}:{PORT}")
+logger.info("Server started")
 
 server_running = True
-while server_running:
-    client_socket, address = server_socket.accept()
-    print("Client received")
+try:
+    while server_running:
+        try:
+            client_socket, address = server_socket.accept()
+        except OSError as error:
+            logger.error("Could not accept client connection: %s", error)
+            break
 
-    try:
-        if authenticate(client_socket):
-            print("User successfully authenticated")
-            while True:
-                menu_result = menu(client_socket)
-                if menu_result is False:
-                    server_running = False
-                    break
-                if menu_result is None:
-                    break
+        logger.info("Client connected from %s", address)
 
-    except Exception as error:
-        client_socket.sendall(
-            f"ERROR|{error}".encode()
-        )
-    finally:
-        client_socket.close()
+        try:
+            if authenticate(client_socket):
+                logger.info("User successfully authenticated")
+                while True:
+                    menu_result = menu(client_socket)
+                    if menu_result is False:
+                        server_running = False
+                        break
+                    if menu_result is None:
+                        break
+            else:
+                logger.warning("Failed authentication")
 
-server_socket.close()
+        except Exception as error:
+            logger.exception("Error while handling client %s", address)
+            try:
+                client_socket.sendall(f"ERROR|{error}".encode())
+            except OSError:
+                logger.debug("Could not send error to disconnected client %s", address)
+        finally:
+            client_socket.close()
+except KeyboardInterrupt:
+    logger.info("Server stopped by operator")
+finally:
+    server_socket.close()
+    logger.info("Server socket closed")

@@ -6,11 +6,11 @@ HOST = "127.0.0.1"
 PORT = 4444
 
 # sample user database
+# ideally this would not be hardcoded in, this should be in a seperate MySQL database with authentication
+# for testing, you can use loging testing:password with the TOTP secret PQE6UTKFIXGL
 users = {
-    "jasper": {
-        "password_hash": hashlib.sha256(
-            "password".encode()
-        ).hexdigest(),
+    "testing": {
+        "password_hash": hashlib.sha256("password".encode()).hexdigest(), # obviously this would not stored in code in deployment. this would already be hashed and in a SQL database
         "totp_secret": "PQE6UTKFIXGL"
     }
 }

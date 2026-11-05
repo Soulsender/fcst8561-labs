@@ -1,0 +1,17 @@
+filename,format,metadata_fields,suspected_field,encoding,risk_score,reason
+Activation.png,PNG,"srgb, gamma, dpi, exif, Make, Model, Software, create-date",exif: Exif Nikon D750 Adobe Lightroom 13.0 2025:02:02 10:15:00 0232 0100 2025:02:02 10:15:00 2025:02:02 10:15:00 ASCII VULN: Identify unpatched CVE-2024-XXXX in web gateway.,Plain text,50,Suspicious text found
+Brain-Channel.png,PNG,"srgb, gamma, dpi, exif",exif: Exif LATERAL: Pivot to internal Domain Controller using Mimikatz.,Plain text,50,Suspicious text found
+Brain.png,PNG,"srgb, gamma, dpi, Software",Software: RECON: Perform DNS harvesting and Subdomain enumeration.,Plain text,50,Suspicious text found
+Chemicals.png,PNG,ImageDescription,ImageDescription: EXPLOIT: Deploy SQL Injection payload to bypass WAF.,Plain text,50,Suspicious text found
+Dopamine.png,PNG,"srgb, gamma, dpi, xmp, XML:com.adobe.xmp","xmp: <?xpacket begin=' ' id='W5M0MpCehiHzreSzNTczkc9d'?> <x:xmpmeta xmlns:x='adobe:ns:meta/' x:xmptk='Image::ExifTool 12.76'> <rdf:RDF xmlns:rdf='http://www.w3.org/1999/02/22-rdf-syntax-ns#'>  <rdf:Description rdf:about=''   xmlns:exif='http://ns.adobe.com/exif/1.0/'>   <exif:MakerNote>PERSIST: Establish reverse shell via obfuscated cron job.</exif:MakerNote>  </rdf:Description> </rdf:RDF> </x:xmpmeta> <?xpacket end='r'?>; XML:com.adobe.xmp: <?xpacket begin='﻿' id='W5M0MpCehiHzreSzNTczkc9d'?>
+<x:xmpmeta xmlns:x='adobe:ns:meta/' x:xmptk='Image::ExifTool 12.76'>
+<rdf:RDF xmlns:rdf='http://www.w3.org/1999/02/22-rdf-syntax-ns#'>
+
+ <rdf:Description rdf:about=''
+  xmlns:exif='http://ns.adobe.com/exif/1.0/'>
+  <exif:MakerNote>PERSIST: Establish reverse shell via obfuscated cron job.</exif:MakerNote>
+ </rdf:Description>
+</rdf:RDF>
+</x:xmpmeta>
+<?xpacket end='r'?>",Plain text,50,Suspicious text found
+Music.png,PNG,"srgb, gamma, dpi, Copyright, Make, Model, create-date, exif",Copyright: decoded text: EXFIL: Tunnel compressed database dump via DNS Covert Channel.; exif: decoded text: EXFIL: Tunnel compressed database dump via DNS Covert Channel.,Base64,50,Base64-encoded text detected; Suspicious keyword in decoded text
